@@ -1,253 +1,399 @@
-<div class="board">
-  <header class="board__header">
-    <div class="board__title-group">
-      <h1 class="board__title">My Tasks</h1>
-      <p class="board__subtitle">{{ tasks.length }} total · {{ doneTasks.length }} done</p>
+<div class="app-container">
+  
+  <!-- APP HEADER -->
+  <header class="app-header">
+    <div class="logo-area">
+      <span class="logo-icon">⚡</span>
+      <div class="logo-text">
+        <h1>TaskFlow</h1>
+        <p class="subtitle">Stay Organized, Stay Productive</p>
+      </div>
     </div>
-
-    <!-- New task form. (ngSubmit) fires on Enter or button click.
-         #taskForm="ngForm" lets us disable the button until valid. -->
-    <form class="task-form" #taskForm="ngForm" (ngSubmit)="addTask()">
-      <input
-        type="text"
-        name="title"
-        class="task-form__input"
-        placeholder="Add a task…"
-        [(ngModel)]="newTaskTitle"
-        required
-        minlength="2"
-        #titleField="ngModel"
-      />
-
-      <select
-        name="priority"
-        class="task-form__select"
-        [(ngModel)]="newTaskPriority"
-      >
-        <option value="low">Low</option>
-        <option value="medium">Medium</option>
-        <option value="high">High</option>
-      </select>
-
-      <button
-        type="submit"
-        class="task-form__submit"
-        [disabled]="taskForm.invalid"
-      >
-        + Add task
-      </button>
-    </form>
-
-    <!-- Search + status filter. Two-way bound so the *ngFor lists below
-         re-filter live as the user types/selects. -->
-    <div class="board__controls">
-      <input
-        type="search"
-        class="board__search"
-        placeholder="Search tasks…"
-        [(ngModel)]="searchTerm"
-        name="search"
-      />
-
-      <div class="board__filter-group" role="group" aria-label="Filter by status">
-        <button
-          type="button"
-          class="filter-chip"
-          [class.filter-chip--active]="filterStatus === 'all'"
-          (click)="filterStatus = 'all'"
-        >All</button>
-        <button
-          type="button"
-          class="filter-chip"
-          [class.filter-chip--active]="filterStatus === 'todo'"
-          (click)="filterStatus = 'todo'"
-        >To do</button>
-        <button
-          type="button"
-          class="filter-chip"
-          [class.filter-chip--active]="filterStatus === 'in-progress'"
-          (click)="filterStatus = 'in-progress'"
-        >In progress</button>
-        <button
-          type="button"
-          class="filter-chip"
-          [class.filter-chip--active]="filterStatus === 'done'"
-          (click)="filterStatus = 'done'"
-        >Done</button>
+    
+    <div class="stats-overview">
+      <div class="stat-card">
+        <span class="stat-num">{{ tasks.length }}</span>
+        <span class="stat-label">Total Tasks</span>
+      </div>
+      <div class="stat-card done">
+        <span class="stat-num">{{ completedCount }}</span>
+        <span class="stat-label">Completed</span>
+      </div>
+      <div class="stat-card pending">
+        <span class="stat-num">{{ pendingCount }}</span>
+        <span class="stat-label">Pending</span>
       </div>
     </div>
   </header>
 
-  <!-- ======================= COLUMNS ======================= -->
-  <!-- Three-column layout: To do / In progress / Done. Each column is
-       driven by its own getter (todoTasks, inProgressTasks, doneTasks)
-       rather than filtering tasks inline in the template — keeps the
-       markup readable and the filtering logic testable in the component. -->
-  <div class="board__columns">
-
-    <!-- ---- TO DO ---- -->
-    <section class="column" aria-label="To do tasks">
-      <div class="column__header">
-        <h2 class="column__title">To do</h2>
-        <span class="column__count">{{ todoTasks.length }}</span>
-      </div>
-
-      <div class="column__list">
-        <!-- ngFor with trackBy avoids Angular re-rendering the whole list
-             on every change; only the task that actually changed re-renders. -->
-        <article
-          class="task-card"
-          *ngFor="let task of todoTasks; trackBy: trackByTaskId"
-          [class.task-card--overdue]="task.dueDate && task.dueDate < today"
-          (click)="openTaskDetail(task)"
-        >
-          <div class="task-card__top">
-            <span class="priority-tag" [ngClass]="'priority-tag--' + task.priority">
-              {{ task.priority }}
+  <!-- MAIN WORKSPACE -->
+  <main class="workspace">
+    
+    <!-- LEFT SIDEBAR: CREATOR & FILTERS -->
+    <aside class="sidebar">
+      
+      <!-- ADD TASK CARD -->
+      <section class="widget form-widget">
+        <h2 class="widget-title">Create New Task</h2>
+        <form #taskForm="ngForm" (ngSubmit)="addTask()" class="creation-form">
+          <div class="form-group">
+            <label for="taskTitle">Task Title *</label>
+            <input
+              type="text"
+              id="taskTitle"
+              name="title"
+              placeholder="e.g. Design Landing Page"
+              [(ngModel)]="newTaskTitle"
+              required
+              minlength="2"
+              class="form-control"
+              #titleField="ngModel"
+            />
+            <span class="validation-msg" *ngIf="titleField.touched && titleField.invalid">
+              Title is required (minimum 2 characters).
             </span>
-            <button
-              type="button"
-              class="task-card__delete"
-              aria-label="Delete task"
-              (click)="deleteTask(task); $event.stopPropagation()"
-            >×</button>
           </div>
 
-          <h3 class="task-card__title">{{ task.title }}</h3>
-
-          <p class="task-card__desc" *ngIf="task.description">
-            {{ task.description }}
-          </p>
-
-          <div class="task-card__footer" *ngIf="task.dueDate">
-            <span class="task-card__due">Due {{ task.dueDate | date: 'MMM d' }}</span>
+          <div class="form-group">
+            <label for="taskDesc">Description</label>
+            <textarea
+              id="taskDesc"
+              name="description"
+              placeholder="Provide some details…"
+              [(ngModel)]="newTaskDescription"
+              class="form-control"
+              rows="3"
+            ></textarea>
           </div>
 
-          <!-- Move-forward action: click stops propagation so it doesn't
-               also trigger openTaskDetail() above. -->
+          <div class="form-row">
+            <div class="form-group half">
+              <label for="taskPriority">Priority</label>
+              <select
+                id="taskPriority"
+                name="priority"
+                [(ngModel)]="newTaskPriority"
+                class="form-control"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+
+            <div class="form-group half">
+              <label for="taskDueDate">Due Date</label>
+              <input
+                type="date"
+                id="taskDueDate"
+                name="dueDate"
+                [(ngModel)]="newTaskDueDate"
+                class="form-control"
+              />
+            </div>
+          </div>
+
           <button
-            type="button"
-            class="task-card__advance"
-            (click)="updateStatus(task, 'in-progress'); $event.stopPropagation()"
+            type="submit"
+            class="btn-submit"
+            [disabled]="taskForm.invalid"
           >
-            Start →
+            Create Task
           </button>
-        </article>
+        </form>
+      </section>
 
-        <!-- Empty state — shown only when the filtered list is empty. -->
-        <p class="column__empty" *ngIf="todoTasks.length === 0">
-          Nothing here. Add a task above to get started.
-        </p>
+      <!-- CONTROL FILTERS CARD -->
+      <section class="widget filter-widget">
+        <h2 class="widget-title">Search & Filter</h2>
+        
+        <div class="form-group">
+          <label>Search text</label>
+          <div class="search-input-wrapper">
+            <input
+              type="search"
+              placeholder="Type to search…"
+              [(ngModel)]="searchTerm"
+              class="form-control search-control"
+            />
+            <span class="search-icon">🔍</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Filter by Priority</label>
+          <div class="priority-chips">
+            <button
+              type="button"
+              class="chip"
+              [class.active]="filterPriority === 'all'"
+              (click)="filterPriority = 'all'"
+            >All</button>
+            <button
+              type="button"
+              class="chip low"
+              [class.active]="filterPriority === 'low'"
+              (click)="filterPriority = 'low'"
+            >Low</button>
+            <button
+              type="button"
+              class="chip medium"
+              [class.active]="filterPriority === 'medium'"
+              (click)="filterPriority = 'medium'"
+            >Medium</button>
+            <button
+              type="button"
+              class="chip high"
+              [class.active]="filterPriority === 'high'"
+              (click)="filterPriority = 'high'"
+            >High</button>
+          </div>
+        </div>
+      </section>
+      
+    </aside>
+
+    <!-- RIGHT SECTION: KANBAN BOARD -->
+    <section class="board-container">
+      
+      <!-- TO DO COLUMN -->
+      <div class="kanban-column">
+        <div class="column-header todo">
+          <h3>To Do</h3>
+          <span class="badge">{{ todoTasks.length }}</span>
+        </div>
+        <div class="task-list">
+          <div 
+            *ngFor="let task of todoTasks; trackBy: trackByTaskId" 
+            class="task-card"
+            [class.overdue]="task.dueDate && task.dueDate < today"
+            (click)="openTaskDetail(task, false)"
+          >
+            <div class="card-meta">
+              <span class="tag-priority" [ngClass]="task.priority">{{ task.priority }}</span>
+              <div class="card-actions">
+                <button type="button" class="action-btn edit" (click)="openTaskDetail(task, true); $event.stopPropagation()" title="Edit">✏️</button>
+                <button type="button" class="action-btn delete" (click)="deleteTask(task); $event.stopPropagation()" title="Delete">🗑️</button>
+              </div>
+            </div>
+            
+            <h4 class="card-title">{{ task.title }}</h4>
+            <p class="card-desc" *ngIf="task.description">{{ task.description }}</p>
+            
+            <div class="card-footer">
+              <span class="due-date" *ngIf="task.dueDate">
+                📅 {{ task.dueDate | date: 'MMM d, y' }}
+                <span class="overdue-warning" *ngIf="task.dueDate < today">(Overdue)</span>
+              </span>
+              <button 
+                type="button" 
+                class="btn-advance" 
+                (click)="updateStatus(task, 'in-progress'); $event.stopPropagation()"
+              >
+                Start →
+              </button>
+            </div>
+          </div>
+          
+          <div class="empty-state" *ngIf="todoTasks.length === 0">
+            <p>No tasks to do. Add one on the left!</p>
+          </div>
+        </div>
       </div>
+
+      <!-- IN PROGRESS COLUMN -->
+      <div class="kanban-column">
+        <div class="column-header in-progress">
+          <h3>In Progress</h3>
+          <span class="badge">{{ inProgressTasks.length }}</span>
+        </div>
+        <div class="task-list">
+          <div 
+            *ngFor="let task of inProgressTasks; trackBy: trackByTaskId" 
+            class="task-card"
+            [class.overdue]="task.dueDate && task.dueDate < today"
+            (click)="openTaskDetail(task, false)"
+          >
+            <div class="card-meta">
+              <span class="tag-priority" [ngClass]="task.priority">{{ task.priority }}</span>
+              <div class="card-actions">
+                <button type="button" class="action-btn edit" (click)="openTaskDetail(task, true); $event.stopPropagation()" title="Edit">✏️</button>
+                <button type="button" class="action-btn delete" (click)="deleteTask(task); $event.stopPropagation()" title="Delete">🗑️</button>
+              </div>
+            </div>
+            
+            <h4 class="card-title">{{ task.title }}</h4>
+            <p class="card-desc" *ngIf="task.description">{{ task.description }}</p>
+            
+            <div class="card-footer">
+              <span class="due-date" *ngIf="task.dueDate">
+                📅 {{ task.dueDate | date: 'MMM d, y' }}
+                <span class="overdue-warning" *ngIf="task.dueDate < today">(Overdue)</span>
+              </span>
+              <div class="step-actions">
+                <button 
+                  type="button" 
+                  class="btn-back" 
+                  (click)="updateStatus(task, 'todo'); $event.stopPropagation()"
+                >
+                  ← Back
+                </button>
+                <button 
+                  type="button" 
+                  class="btn-advance complete" 
+                  (click)="updateStatus(task, 'done'); $event.stopPropagation()"
+                >
+                  Finish ✓
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="empty-state" *ngIf="inProgressTasks.length === 0">
+            <p>No tasks currently in progress.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- DONE COLUMN -->
+      <div class="kanban-column">
+        <div class="column-header done">
+          <h3>Done</h3>
+          <span class="badge">{{ doneTasks.length }}</span>
+        </div>
+        <div class="task-list">
+          <div 
+            *ngFor="let task of doneTasks; trackBy: trackByTaskId" 
+            class="task-card completed"
+            (click)="openTaskDetail(task, false)"
+          >
+            <div class="card-meta">
+              <span class="tag-priority" [ngClass]="task.priority">{{ task.priority }}</span>
+              <div class="card-actions">
+                <button type="button" class="action-btn delete" (click)="deleteTask(task); $event.stopPropagation()" title="Delete">🗑️</button>
+              </div>
+            </div>
+            
+            <h4 class="card-title">{{ task.title }}</h4>
+            <p class="card-desc" *ngIf="task.description">{{ task.description }}</p>
+            
+            <div class="card-footer">
+              <span class="due-date completed" *ngIf="task.dueDate">
+                📅 Completed (due {{ task.dueDate | date: 'MMM d' }})
+              </span>
+              <button 
+                type="button" 
+                class="btn-back" 
+                (click)="updateStatus(task, 'in-progress'); $event.stopPropagation()"
+              >
+                ← Reopen
+              </button>
+            </div>
+          </div>
+          
+          <div class="empty-state" *ngIf="doneTasks.length === 0">
+            <p>No completed tasks yet. Finish a task!</p>
+          </div>
+        </div>
+      </div>
+
     </section>
 
-    <!-- ---- IN PROGRESS ---- -->
-    <section class="column" aria-label="In progress tasks">
-      <div class="column__header">
-        <h2 class="column__title">In progress</h2>
-        <span class="column__count">{{ inProgressTasks.length }}</span>
-      </div>
+  </main>
 
-      <div class="column__list">
-        <article
-          class="task-card"
-          *ngFor="let task of inProgressTasks; trackBy: trackByTaskId"
-          (click)="openTaskDetail(task)"
-        >
-          <div class="task-card__top">
-            <span class="priority-tag" [ngClass]="'priority-tag--' + task.priority">
-              {{ task.priority }}
-            </span>
-            <button
-              type="button"
-              class="task-card__delete"
-              aria-label="Delete task"
-              (click)="deleteTask(task); $event.stopPropagation()"
-            >×</button>
-          </div>
-
-          <h3 class="task-card__title">{{ task.title }}</h3>
-          <p class="task-card__desc" *ngIf="task.description">{{ task.description }}</p>
-
-          <div class="task-card__actions">
-            <button
-              type="button"
-              class="task-card__back"
-              (click)="updateStatus(task, 'todo'); $event.stopPropagation()"
-            >← Back</button>
-            <button
-              type="button"
-              class="task-card__advance"
-              (click)="updateStatus(task, 'done'); $event.stopPropagation()"
-            >Finish →</button>
-          </div>
-        </article>
-
-        <p class="column__empty" *ngIf="inProgressTasks.length === 0">
-          Nothing in progress right now.
-        </p>
-      </div>
-    </section>
-
-    <!-- ---- DONE ---- -->
-    <section class="column" aria-label="Completed tasks">
-      <div class="column__header">
-        <h2 class="column__title">Done</h2>
-        <span class="column__count">{{ doneTasks.length }}</span>
-      </div>
-
-      <div class="column__list">
-        <article
-          class="task-card task-card--done"
-          *ngFor="let task of doneTasks; trackBy: trackByTaskId"
-          (click)="openTaskDetail(task)"
-        >
-          <div class="task-card__top">
-            <span class="priority-tag" [ngClass]="'priority-tag--' + task.priority">
-              {{ task.priority }}
-            </span>
-            <button
-              type="button"
-              class="task-card__delete"
-              aria-label="Delete task"
-              (click)="deleteTask(task); $event.stopPropagation()"
-            >×</button>
-          </div>
-
-          <h3 class="task-card__title task-card__title--done">{{ task.title }}</h3>
-        </article>
-
-        <p class="column__empty" *ngIf="doneTasks.length === 0">
-          No completed tasks yet.
-        </p>
-      </div>
-    </section>
-
-  </div>
-
-  <!-- ======================= TASK DETAIL MODAL ======================= -->
-  <!-- *ngIf so the modal (and its bindings) don't exist in the DOM at all
-       when no task is selected — cheaper than hiding it with CSS. -->
+  <!-- MODAL: VIEW / EDIT DETAIL -->
   <div class="modal-overlay" *ngIf="selectedTask" (click)="closeTaskDetail()">
-    <div class="modal" (click)="$event.stopPropagation()">
-      <button class="modal__close" aria-label="Close" (click)="closeTaskDetail()">×</button>
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <button class="modal-close" (click)="closeTaskDetail()">×</button>
+      
+      <!-- VIEW MODE -->
+      <div class="modal-view-mode" *ngIf="!isEditMode">
+        <span class="tag-priority modal-tag" [ngClass]="selectedTask.priority">{{ selectedTask.priority }}</span>
+        <h2 class="modal-title">{{ selectedTask.title }}</h2>
+        
+        <div class="modal-section" *ngIf="selectedTask.description">
+          <h5>Description</h5>
+          <p class="modal-desc">{{ selectedTask.description }}</p>
+        </div>
 
-      <span class="priority-tag" [ngClass]="'priority-tag--' + selectedTask.priority">
-        {{ selectedTask.priority }}
-      </span>
+        <div class="modal-meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Status</span>
+            <span class="meta-val capitalize">{{ selectedTask.status }}</span>
+          </div>
+          <div class="meta-item" *ngIf="selectedTask.dueDate">
+            <span class="meta-label">Due Date</span>
+            <span class="meta-val">📅 {{ selectedTask.dueDate | date: 'longDate' }}</span>
+          </div>
+        </div>
 
-      <h2 class="modal__title">{{ selectedTask.title }}</h2>
+        <div class="modal-footer">
+          <button type="button" class="btn-primary" (click)="isEditMode = true">Edit Details</button>
+          <button type="button" class="btn-secondary" (click)="closeTaskDetail()">Close</button>
+        </div>
+      </div>
 
-      <p class="modal__desc" *ngIf="selectedTask.description">
-        {{ selectedTask.description }}
-      </p>
+      <!-- EDIT MODE -->
+      <div class="modal-edit-mode" *ngIf="isEditMode">
+        <h3>Edit Task Details</h3>
+        <form (ngSubmit)="saveTaskEdit()" class="edit-form">
+          <div class="form-group">
+            <label for="editTitle">Title *</label>
+            <input
+              type="text"
+              id="editTitle"
+              name="title"
+              required
+              [(ngModel)]="selectedTask.title"
+              class="form-control"
+            />
+          </div>
 
-      <dl class="modal__meta">
-        <dt>Status</dt>
-        <dd>{{ selectedTask.status }}</dd>
-        <dt *ngIf="selectedTask.dueDate">Due</dt>
-        <dd *ngIf="selectedTask.dueDate">{{ selectedTask.dueDate | date: 'longDate' }}</dd>
-      </dl>
+          <div class="form-group">
+            <label for="editDesc">Description</label>
+            <textarea
+              id="editDesc"
+              name="description"
+              [(ngModel)]="selectedTask.description"
+              class="form-control"
+              rows="3"
+            ></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group half">
+              <label for="editPriority">Priority</label>
+              <select
+                id="editPriority"
+                name="priority"
+                [(ngModel)]="selectedTask.priority"
+                class="form-control"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+
+            <div class="form-group half">
+              <label for="editDueDate">Due Date</label>
+              <input
+                type="date"
+                id="editDueDate"
+                name="dueDate"
+                [(ngModel)]="selectedTask.dueDate"
+                class="form-control"
+              />
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="submit" class="btn-primary" [disabled]="!selectedTask.title.trim()">Save Changes</button>
+            <button type="button" class="btn-secondary" (click)="isEditMode = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+
     </div>
   </div>
 
